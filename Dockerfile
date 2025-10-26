@@ -1,25 +1,11 @@
-# Note: This Dockerfile is for a Node.js application using Prisma and PostgreSQL.
-FROM node:18-alpine
+FROM node:lts-alpine3.17
 
-# Set the working directory in the container
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm install
+RUN npm ci
 
-# Copy the application code
-# Note: Ensure that the Dockerfile is in the root of your project
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
-
-# Expose the application port
-# Note: The port 4106 is used for the backend service
-EXPOSE 4106
-
-# Start the application
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npm run db:deploy && npm run dev"]
