@@ -67,6 +67,45 @@ npm run dev
 
 ---
 
+## Deployment via Docker
+
+This section describes how to build, start, and manage the application's Docker containers.
+
+### Build and Start Containers
+
+Run the following command to build the images (if needed) and start all services in detached mode:
+
+```sh
+docker compose -f docker-compose.yml up --build -d
+```
+
+### Check Container Status
+
+To verify the container's state:
+
+```sh
+docker ps -a
+```
+
+
+This will list all containers, including those that have exited.
+
+### Start Services (if already built)
+
+If the containers have already been created (from a previous build), simply start them again with:
+
+```sh
+docker start $(docker ps -aq)
+```
+### Stop All Running Containers
+
+To stop all currently running containers:
+
+```sh
+docker stop $(docker ps -q)
+```
+
+
 ## License
 
 This project is licensed under the MIT License.
