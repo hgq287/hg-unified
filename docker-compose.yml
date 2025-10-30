@@ -13,7 +13,7 @@ services:
     ports:
       - '5432:5432'
     networks:
-      - prisma-network
+      - hgbe-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
@@ -25,7 +25,7 @@ services:
       context: .  
       dockerfile: Dockerfile
     ports:
-      - '3000:3000'
+      - '4106:4106'
     stdin_open: true
     tty: true  
     depends_on:
@@ -34,7 +34,7 @@ services:
     env_file:
       - .env.prod
     networks:
-      - prisma-network
+      - hgbe-network
 networks:
-  prisma-network:
-    name: prisma-network
+  hgbe-network:
+    name: hgbe-network

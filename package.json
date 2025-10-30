@@ -7,7 +7,8 @@
     "start": "node ./dist/index.js",
     "build": "rm -rf dist; tsc --pretty && cp -r src/generated dist/generated",
     "dev": "nodemon",
-    "prod": "NODE_ENV='production' node dist/index.js"
+    "prod": "NODE_ENV='production' node dist/index.js",
+    "db:deploy": "npx prisma migrate deploy && npx prisma generate"
   },
   "prisma": {
     "schema": "prisma/schema.prisma"
