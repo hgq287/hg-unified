@@ -114,6 +114,10 @@ export const login = async (userPayload: any) => {
 };
 
 export const getUserProfile = async (id: number) => {
+  if(id === undefined) {
+    return null;
+  }
+
   const user = (await prisma.user.findUnique({
     where: {
       id,

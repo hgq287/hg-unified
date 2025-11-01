@@ -40,10 +40,15 @@ router.post('/signin', async (req: Request, res: Response, next: NextFunction) =
  * @auth required
  * @route {GET} /user/profile
  */
-router.get('/user/profile', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/user/profile', auth.required, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await getUserProfile(req.auth?.user?.id);
-    res.json({ user });
+    const userId = req.auth?.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const user = await getUserProfile(userId);
+    res.status(200).json({ success: true, data: { user } });
   } catch (error) {
     next(error);
   }
@@ -54,7 +59,7 @@ router.get('/user/profile', async (req: Request, res: Response, next: NextFuncti
  * @auth required
  * @route {PUT} /user/profile
  */
-router.put('/user/profile', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/user/profile', auth.required, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await updateUserProfile(req.body, req.auth?.user?.id);
     res.json({ user });
