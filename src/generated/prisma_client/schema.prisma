@@ -16,6 +16,12 @@ model User {
   password String?
   bio      String?
   posts    Post[]
+
+  // New relationships for OAuth
+  oauthClients  OAuthClient[]
+  authCodes     OAuthAuthorizationCode[]
+  accessTokens  OAuthAccessToken[]
+  refreshTokens OAuthRefreshToken[]
 }
 
 model Post {
@@ -25,4 +31,69 @@ model Post {
   published Boolean @default(false)
   author    User?   @relation(fields: [authorId], references: [id])
   authorId  Int?
+}
+
+// ----------------------------------------------------------------------
+// --- OAuth 2.0 Models (REQUIRED FOR AUTHORIZATION SERVER) ---
+// ----------------------------------------------------------------------
+
+// Represents an external application that wants access to your API
+model OAuthClient {
+  id           Int      @id @default(autoincrement())
+  clientId     String   @unique
+  clientSecret String
+  redirectUris String[] // List of allowed callback URIs
+  grants       String[] // e.g., ["authorization_code", "refresh_token"]
+
+  // Relationship to the User who owns this Client app (Optional)
+  userId Int?  @map("user_id")
+  user   User? @relation(fields: [userId], references: [id])
+
+  // Relationships for tokens and codes
+  accessTokens       OAuthAccessToken[]
+  refreshTokens      OAuthRefreshToken[]
+  authorizationCodes OAuthAuthorizationCode[]
+}
+
+// Stores the short-lived code exchanged for a token
+model OAuthAuthorizationCode {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  expiresAt   DateTime
+  redirectUri String
+  scope       String?
+
+  // Relationships
+  clientId Int         @map("client_id")
+  client   OAuthClient @relation(fields: [clientId], references: [id])
+  userId   Int         @map("user_id")
+  user     User        @relation(fields: [userId], references: [id])
+}
+
+// Stores the token used for API access
+model OAuthAccessToken {
+  id          Int      @id @default(autoincrement())
+  accessToken String   @unique
+  expiresAt   DateTime
+  scope       String?
+
+  // Relationships
+  clientId Int         @map("client_id")
+  client   OAuthClient @relation(fields: [clientId], references: [id])
+  userId   Int         @map("user_id")
+  user     User        @relation(fields: [userId], references: [id])
+}
+
+// Stores the long-lived token for refreshing access
+model OAuthRefreshToken {
+  id           Int      @id @default(autoincrement())
+  refreshToken String   @unique
+  expiresAt    DateTime
+  scope        String?
+
+  // Relationships
+  clientId Int         @map("client_id")
+  client   OAuthClient @relation(fields: [clientId], references: [id])
+  userId   Int         @map("user_id")
+  user     User        @relation(fields: [userId], references: [id])
 }

@@ -136,6 +136,43 @@ exports.Prisma.PostScalarFieldEnum = {
   authorId: 'authorId'
 };
 
+exports.Prisma.OAuthClientScalarFieldEnum = {
+  id: 'id',
+  clientId: 'clientId',
+  clientSecret: 'clientSecret',
+  redirectUris: 'redirectUris',
+  grants: 'grants',
+  userId: 'userId'
+};
+
+exports.Prisma.OAuthAuthorizationCodeScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  expiresAt: 'expiresAt',
+  redirectUri: 'redirectUri',
+  scope: 'scope',
+  clientId: 'clientId',
+  userId: 'userId'
+};
+
+exports.Prisma.OAuthAccessTokenScalarFieldEnum = {
+  id: 'id',
+  accessToken: 'accessToken',
+  expiresAt: 'expiresAt',
+  scope: 'scope',
+  clientId: 'clientId',
+  userId: 'userId'
+};
+
+exports.Prisma.OAuthRefreshTokenScalarFieldEnum = {
+  id: 'id',
+  refreshToken: 'refreshToken',
+  expiresAt: 'expiresAt',
+  scope: 'scope',
+  clientId: 'clientId',
+  userId: 'userId'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -154,7 +191,11 @@ exports.Prisma.NullsOrder = {
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Post: 'Post'
+  Post: 'Post',
+  OAuthClient: 'OAuthClient',
+  OAuthAuthorizationCode: 'OAuthAuthorizationCode',
+  OAuthAccessToken: 'OAuthAccessToken',
+  OAuthRefreshToken: 'OAuthRefreshToken'
 };
 
 /**
