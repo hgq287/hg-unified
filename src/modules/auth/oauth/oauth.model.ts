@@ -1,5 +1,5 @@
 import * as oauth2 from 'oauth2-server'; 
-import prisma from '../../prisma/prisma.client'; 
+import prisma from '../../../config/prisma.client'; 
 
 const model: any = { 
 

@@ -5,9 +5,7 @@ import bodyParser from 'body-parser';
 import routes from './routes/routes';
 import config from './config';
 
-import { ensureOAuthClient } from './utils/oauth.setup';
-
-import HttpException from './exceptions/http_exception';
+import { ensureOAuthClient } from './modules/auth/oauth/oauth.setup';
 
 class App {
   async init(): Promise<any> {

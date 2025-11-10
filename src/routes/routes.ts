@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import authController from './auth/auth.controller';
+import authController from '../modules/auth/auth.controller';
 
 const api = Router()
   .use(authController);

@@ -1,4 +1,4 @@
-import prisma from '../prisma/prisma.client'; 
+import prisma from '../../../config/prisma.client'; 
 const TEST_CLIENT_ID = 'abc12345';
 const TEST_CLIENT_SECRET = 'xyz67890';
 const TEST_REDIRECT_URI = 'http://client.app/callback';

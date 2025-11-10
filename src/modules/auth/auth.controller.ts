@@ -2,7 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 
 import OAuthServer from 'express-oauth-server';
 
-import oauthModel from './oauth.model';
+import oauthModel from './oauth/oauth.model';
 import auth from './auth';
 import { sharedAuth } from './auth.shared';
 import { createUser, getUserProfile, login, updateUserProfile } from './auth.service';

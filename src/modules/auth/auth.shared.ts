@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import oauthModel from './oauth.model';
+import oauthModel from './oauth/oauth.model';
 import auth from './auth'; 
 
 const getTokenFromHeaders = (req: Request): string | null => {
