@@ -1,0 +1,69 @@
+# Node modules
+/node_modules/
+
+# Build output
+/dist/
+/build/
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Yarn cache folder
+.yarn/cache/
+
+# Yarn releases (if using Yarn v2+ Plug’n’Play)
+/.yarn/releases/
+/.yarn/plugins/
+/.yarn/sdks/
+/.yarn/versions/
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE/editor folders and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# MacOS files
+.DS_Store
+
+# Linux files
+.*.swp
+
+# Test coverage
+coverage/
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Lock files (usually you commit yarn.lock, so do NOT ignore it)
+# If you want to ignore it (not recommended), uncomment below:
+# yarn.lock
+
+# Vuepress build
+.vuepress/dist
+
+# Storybook build output
+/storybook-static/
+
+# Optional typescript cache
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
