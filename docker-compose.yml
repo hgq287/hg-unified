@@ -1,0 +1,57 @@
+version: '3.8' # Using version 3.8 for better features 
+services:
+  # PostgreSQL Database Service
+  postgres_db:
+    image: postgres:15
+    hostname: postgres_db
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Hgbe123
+    ports:
+      - '5432:5432'
+    networks:
+      - hgunified-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+  # Backend API Service 
+  hgunified_service:
+    build: 
+      context: ./backend  
+      dockerfile: Dockerfile
+    container_name: hgunified_api 
+    ports:
+      - '4106:4106' 
+    stdin_open: true
+    tty: true  
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env.prod
+    networks:
+      - hgunified-network
+
+  # Frontend Web App Service
+  web-app:
+    build:
+      context: ./frontend 
+      dockerfile: Dockerfile
+    container_name: hgunified_web
+    restart: always
+    ports:
+      - "3000:80" 
+    networks:
+      - hgunified-network
+    depends_on:
+      - hgunified_service
+    
+networks:
+  hgunified-network:
+    name: hgunified-network
