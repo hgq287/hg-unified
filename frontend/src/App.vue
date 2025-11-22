@@ -1,6 +1,6 @@
 <template>
   <div class="flex min-h-screen">
-    <Sidebar />
+    <AppSidebar />
     <main class="flex-1 p-4">
       <router-view />
     </main>
@@ -8,5 +8,5 @@
 </template>
 
 <script setup>
-import Sidebar from './components/Sidebar.vue'
+import AppSidebar from './components/AppSidebar.vue'
 </script>

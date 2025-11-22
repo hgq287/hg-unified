@@ -1,4 +1,4 @@
-# dttool-ui
+# hgunified-web
 
 A modern Vue-based web interface for dttool, providing intuitive access to file converters, color tools, API activity logs, quick notes, and beyond.
 
