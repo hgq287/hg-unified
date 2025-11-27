@@ -11,9 +11,9 @@ const router = Router();
 
 const oauth = new OAuthServer({
   model: oauthModel,
-  grants: ['authorization_code', 'refresh_token'], 
-  accessTokenLifetime: 60 * 60, // 1 hour
-  refreshTokenLifetime: 60 * 60 * 24 * 7, // 1 week
+  grants: ['authorization_code', 'refresh_token', 'client_credentials'],
+  accessTokenLifetime: 60 * 60, 
+  refreshTokenLifetime: 60 * 60 * 24 * 7, 
 });
 
 /**
@@ -22,28 +22,9 @@ const oauth = new OAuthServer({
 router.get('/oauth/authorize', auth.optional, async (req: Request, res: Response, next: NextFunction) => {
   
   // Ensure the ID is explicitly converted to a number.
-  const authenticatedUserId = 1;// Number(req.auth?.user?.id); 
-  
-  // // Also check for NaN after conversion, which happens if the value was null/undefined/non-numeric.
-  // if (!authenticatedUserId || isNaN(authenticatedUserId)) { 
-  //   return res.status(401).send('Redirect to login page required. Please sign in first.');
-  // }
-
-  // // Pass the now-verified integer ID to the OAuth server
-  // (req as any).oauth = { user: { id: authenticatedUserId } }; 
-  
-  // return oauth.authorize({
-  //   authenticateHandler: {
-  //     handle: (request: any, response: any) => {
-  //       return (request as any).oauth.user;
-  //     },
-  //   },
-  //   allowEmptyScope: true,
-  // })(req, res, next);
-
+  const authenticatedUserId = 1;
   (req as any).oauth = { user: { id: Number(authenticatedUserId) } }; 
   
-  // Bỏ qua màn hình consent (tại sao chúng ta dùng authenticateHandler)
   return oauth.authorize({
     authenticateHandler: {
       handle: (request: any, response: any) => {
