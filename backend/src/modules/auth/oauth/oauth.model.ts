@@ -1,7 +1,28 @@
+import * as bcrypt from 'bcryptjs';
 import * as oauth2 from 'oauth2-server'; 
 import prisma from '../../../config/prisma.client'; 
 
 const model: any = { 
+
+  getUser: async (username, password, client) => {
+    const email = username; 
+    const user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, password: true }, 
+    });
+
+    if (!user) {
+        return null; 
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (match) {
+        return { id: user.id } as oauth2.User; 
+    }
+
+    return null; 
+  },
 
   getClient: async (clientId, clientSecret) => {
     const client = await prisma.oAuthClient.findUnique({
@@ -24,7 +45,7 @@ const model: any = {
   saveAuthorizationCode: async (code, client, user) => {
 
     if (!user || !user.id || isNaN(Number(user.id))) {
-        console.error(`[SAVE FAILED] User object from server is invalid: ${JSON.stringify(user)}. Code not saved.`);
+        console.error("[SAVE ERROR] Invalid user information provided for saving authorization code.");
         return null;
     }
 
@@ -108,65 +129,66 @@ const model: any = {
 
   // This method is called after a successful token exchange to immediately invalidate the code.
   revokeAuthorizationCode: async (code) => {
-    console.log(`[Code Debug] Revoking authorization code: ${code.authorizationCode}`);
     const result = await prisma.oAuthAuthorizationCode.deleteMany({
       where: { code: code.authorizationCode },
     });
+    
     // Return true if any records were deleted
     return result.count > 0;
   },
   
-  // Access and Refresh Token Methods
   saveToken: async (token, client, user) => {
-    const clientDb = (await prisma.oAuthClient.findUnique({ where: { clientId: client.id } }))!;
-    
-    // Save Access Token
-    await prisma.oAuthAccessToken.create({
-      data: {
-        accessToken: token.accessToken,
-        expiresAt: token.accessTokenExpiresAt,
-        scope: token.scope,
-        clientId: clientDb.id,
-        userId: user.id,
-      },
+    console.log(`[Token Debug] Saving token for client: ${client.id} and user: ${user ? user.id : 'NO USER'}`);
+    const clientDb = await prisma.oAuthClient.findUnique({
+        where: { clientId: client.id }
     });
-    
-    // Save Refresh Token (if provided)
-    if (token.refreshToken) {
-        await prisma.oAuthRefreshToken.deleteMany({
-            where: {
-                userId: user.id,
-                clientId: clientDb.id,
-            }
-        });
-        
-        await prisma.oAuthRefreshToken.create({
-          data: {
-            refreshToken: token.refreshToken,
-            expiresAt: token.refreshTokenExpiresAt,
-            scope: token.scope,
-            clientId: clientDb.id,
-            userId: user.id,
-          },
-        });
+
+    if (!clientDb) {
+        console.error("Client not found for token saving.");
+        return null;
     }
 
-    return {
-        accessToken: token.accessToken,
-        accessTokenExpiresAt: token.accessTokenExpiresAt,
-        refreshToken: token.refreshToken,
-        refreshTokenExpiresAt: token.refreshTokenExpiresAt,
-        scope: token.scope,
-        client: client,
-        user: user
-    } as oauth2.Token;
+    try {
+        const savedToken = await prisma.oAuthAccessToken.create({
+          data: {
+            accessToken: token.accessToken,
+            expiresAt: token.expiresAt,
+            scope: token.scope,
+            clientId: clientDb.id,
+            userId: user ? Number(user.id) : null,
+          },
+        });
+
+        if (token.refreshToken && user) {
+            await prisma.oAuthRefreshToken.create({
+                data: {
+                    refreshToken: token.refreshToken,
+                    expiresAt: token.expiresAt,
+                    scope: token.scope,
+                    clientId: clientDb.id,
+                    userId: Number(user.id),
+                }
+            });
+        }
+        
+        return {
+            accessToken: savedToken.accessToken,
+            expiresAt: savedToken.expiresAt,
+            scope: savedToken.scope,
+            client: client,
+            user: user, 
+        } as oauth2.Token;
+
+    } catch (e) {
+        console.error(`[SAVE TOKEN FAILED] Database Write Failed:`, e);
+        return null;
+    }
   },
   
-getAccessToken: async (accessToken) => {
-    console.log(`[Token Debug] Attempting to retrieve Access Token: ${accessToken}`);
-    
+  getAccessToken: async (accessToken) => {
     const token = await prisma.oAuthAccessToken.findUnique({
       where: { accessToken },
+      
       // MUST include client and user to satisfy the OAuth2 library's requirements
       include: { client: true, user: true }, 
     });
@@ -178,28 +200,21 @@ getAccessToken: async (accessToken) => {
     
     // Check for Expiration
     if (token.expiresAt < new Date()) {
-        console.error(`[Token Error] Access Token ${accessToken} HAS EXPIRED.`);
-        // Optional: delete the expired token to clean up the database
         await prisma.oAuthAccessToken.delete({ where: { id: token.id } });
         return null;
     }
-    
-    console.log(`[Token Debug] Access Token retrieved and is valid.`);
 
-    // Map the Prisma result back to the required OAuth2 format
     return {
       accessToken: token.accessToken,
       accessTokenExpiresAt: token.expiresAt,
       scope: token.scope,
       
-      // Map the related client data - MUST use client.clientId for 'id'
       client: {
         id: token.client.clientId, // Must be the string clientId
         grants: token.client.grants,
         redirectUris: token.client.redirectUris,
       } as oauth2.Client,
-      
-      // Map the related user data - MUST use the simple { id: number } object
+
       user: { id: token.user.id }, 
     } as oauth2.Token;
   },
@@ -214,8 +229,9 @@ getAccessToken: async (accessToken) => {
     return true; 
   },
   
-  verifyScope: async () => true,
-  getUser: async () => null as any, 
+  verifyScope: async (scope, token) => { 
+      return true; 
+  },
 };
 
 export default model;

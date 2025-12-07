@@ -12,7 +12,7 @@ export async function ensureOAuthClient() {
         clientId: TEST_CLIENT_ID,
         clientSecret: TEST_CLIENT_SECRET,
         redirectUris: [TEST_REDIRECT_URI],
-        grants: ['authorization_code', 'refresh_token'],
+        grants: ['authorization_code', 'refresh_token', 'client_credentials', 'password'],
       },
     });
     console.log(`OAuth Client ensured: ${client.clientId}`);

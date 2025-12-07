@@ -11,10 +11,25 @@ const router = Router();
 
 const oauth = new OAuthServer({
   model: oauthModel,
-  grants: ['authorization_code', 'refresh_token', 'client_credentials'],
+  grants: ['authorization_code', 'refresh_token', 'client_credentials', 'password'],
   accessTokenLifetime: 60 * 60, 
   refreshTokenLifetime: 60 * 60 * 24 * 7, 
 });
+
+const jsonToFormUrlencoded = (req: any, res: any, next: any) => {
+    if (req.is('application/json') && req.body && req.body.grant_type === 'password') {
+        const { grant_type, email, password } = req.body; 
+        req.body = {
+            grant_type: grant_type,
+            email: email,
+            password: password
+        };
+        
+        req.headers['content-type'] = 'application/x-www-form-urlencoded';
+        console.log(req.headers);
+    }
+    next();
+};
 
 /**
  * @route {GET} /oauth/authorize
@@ -62,14 +77,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
  * Sign In
  * @route {POST} /signin
  */
-router.post('/signin', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const payload = req.body;
-    const user = await login(payload);
-    res.json({ user });
-  } catch (error) {
-    next(error);
-  }
+router.post('/signin', oauth.token(), async (req: Request, res: Response, next: NextFunction) => {
 });
 
 
