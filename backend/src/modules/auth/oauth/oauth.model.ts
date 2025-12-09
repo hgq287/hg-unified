@@ -1,27 +1,40 @@
 import * as bcrypt from 'bcryptjs';
 import * as oauth2 from 'oauth2-server'; 
+import * as jwt from 'jsonwebtoken';
+import * as fs from 'fs';
 import prisma from '../../../config/prisma.client'; 
+
+const PRIVATE_KEY = fs.readFileSync('./local_private.key', 'utf8');
+const PUBLIC_KEY = fs.readFileSync('./local_public.key', 'utf8');
+
+const ACCESS_TOKEN_LIFETIME_SECONDS = 3600; // 1 hour
+const REFRESH_TOKEN_LIFETIME_SECONDS = 60 * 60 * 24 * 7; // 1 week
+
+const calculateExpirationTime = (lifetimeSeconds: number): Date => {
+  const expiration = new Date();
+  expiration.setTime(expiration.getTime() + (lifetimeSeconds * 1000));
+  return expiration;
+};
 
 const model: any = { 
 
   getUser: async (username, password, client) => {
     const email = username; 
+    
     const user = await prisma.user.findUnique({
         where: { email },
         select: { id: true, email: true, password: true }, 
     });
 
-    if (!user) {
-        return null; 
-    }
+    if (!user) return null;
 
     const match = await bcrypt.compare(password, user.password);
 
     if (match) {
+      console.log(`[User Debug] User authenticated: ${user.id}`);
         return { id: user.id } as oauth2.User; 
     }
-
-    return null; 
+    return null;
   },
 
   getClient: async (clientId, clientSecret) => {
@@ -31,6 +44,7 @@ const model: any = {
     if (!client) return null;
 
     if (!clientSecret || client.clientSecret === clientSecret) {
+      console.log(`[Client Debug] Client found: ${client.clientId}`);
       return {
         id: client.clientId,
         grants: client.grants,
@@ -41,11 +55,32 @@ const model: any = {
     return null;
   },
 
+  generateAccessToken: async (client, user, scope) => {
+    const expiresInSeconds = 60 * 60; 
+    const expirationDate = new Date(Date.now() + expiresInSeconds * 1000);
+
+    const payload = {
+      sub: user ? user.id.toString() : null,
+      aud: client.id,
+      iss: 'HG_Unified_API',
+      scopes: scope || [],
+    };
+
+    const accessToken = jwt.sign(payload, PRIVATE_KEY, {
+      algorithm: 'RS256',
+      expiresIn: expiresInSeconds,
+    });
+
+    return {
+      accessToken: accessToken,
+      accessTokenExpiresAt: expirationDate,
+      scope: scope,
+    };
+  },
+
 
   saveAuthorizationCode: async (code, client, user) => {
-
     if (!user || !user.id || isNaN(Number(user.id))) {
-        console.error("[SAVE ERROR] Invalid user information provided for saving authorization code.");
         return null;
     }
 
@@ -138,95 +173,76 @@ const model: any = {
   },
   
   saveToken: async (token, client, user) => {
-    console.log(`[Token Debug] Saving token for client: ${client.id} and user: ${user ? user.id : 'NO USER'}`);
-    const clientDb = await prisma.oAuthClient.findUnique({
-        where: { clientId: client.id }
-    });
+    const clientDb = await prisma.oAuthClient.findUnique({ where: { clientId: client.id } });
+    if (!clientDb) return null;
 
-    if (!clientDb) {
-        console.error("Client not found for token saving.");
-        return null;
-    }
-
-    try {
-        const savedToken = await prisma.oAuthAccessToken.create({
-          data: {
-            accessToken: token.accessToken,
-            expiresAt: token.expiresAt,
-            scope: token.scope,
-            clientId: clientDb.id,
-            userId: user ? Number(user.id) : null,
-          },
-        });
-
-        if (token.refreshToken && user) {
-            await prisma.oAuthRefreshToken.create({
-                data: {
-                    refreshToken: token.refreshToken,
-                    expiresAt: token.expiresAt,
-                    scope: token.scope,
-                    clientId: clientDb.id,
-                    userId: Number(user.id),
-                }
-            });
+    const userId = user ? Number(user.id) : null;
+    if (token.refreshToken && userId) {
+      await prisma.oAuthRefreshToken.create({
+        data: {
+          refreshToken: token.refreshToken,
+          expiresAt: calculateExpirationTime(REFRESH_TOKEN_LIFETIME_SECONDS),
+          scope: token.scope,
+          clientId: clientDb.id,
+          userId: userId,
         }
-        
-        return {
-            accessToken: savedToken.accessToken,
-            expiresAt: savedToken.expiresAt,
-            scope: savedToken.scope,
-            client: client,
-            user: user, 
-        } as oauth2.Token;
-
-    } catch (e) {
-        console.error(`[SAVE TOKEN FAILED] Database Write Failed:`, e);
-        return null;
+      });
     }
+    
+    return {
+      accessToken: token.accessToken,
+      accessTokenExpiresAt: token.accessTokenExpiresAt, 
+      refreshToken: token.refreshToken,
+      refreshTokenExpiresAt: token.refreshTokenExpiresAt,
+      scope: token.scope,
+      client: client,
+      user: user,
+    } as oauth2.Token;
   },
   
   getAccessToken: async (accessToken) => {
-    const token = await prisma.oAuthAccessToken.findUnique({
-      where: { accessToken },
-      
-      // MUST include client and user to satisfy the OAuth2 library's requirements
-      include: { client: true, user: true }, 
-    });
+    try {
+      const decoded = jwt.verify(accessToken, PUBLIC_KEY, {
+        algorithms: ['RS256'],
+        ignoreExpiration: false,
+      }) as any;
 
-    if (!token) {
-        console.error(`[Token Error] Access Token ${accessToken} NOT FOUND in database.`);
-        return null;
+      const client = await prisma.oAuthClient.findUnique({ where: { clientId: decoded.aud } });
+      
+      if (!client) return null;
+
+      return {
+        accessToken: accessToken,
+        accessTokenExpiresAt: new Date(decoded.exp * 1000), 
+        scope: decoded.scopes,
+        client: { id: client.clientId } as oauth2.Client,
+        user: { id: Number(decoded.sub) } as oauth2.User,
+      } as oauth2.Token;
+
+    } catch (err) {
+      return null;
     }
-    
-    // Check for Expiration
-    if (token.expiresAt < new Date()) {
-        await prisma.oAuthAccessToken.delete({ where: { id: token.id } });
-        return null;
-    }
+  },
+
+  getRefreshToken: async (refreshToken) => {
+    const token = await prisma.oAuthRefreshToken.findUnique({
+      where: { refreshToken },
+      include: { client: true, user: true },
+    });
+    if (!token || token.expiresAt < new Date()) return null;
 
     return {
-      accessToken: token.accessToken,
-      accessTokenExpiresAt: token.expiresAt,
+      refreshToken: token.refreshToken,
+      refreshTokenExpiresAt: token.expiresAt,
       scope: token.scope,
-      
-      client: {
-        id: token.client.clientId, // Must be the string clientId
-        grants: token.client.grants,
-        redirectUris: token.client.redirectUris,
-      } as oauth2.Client,
-
-      user: { id: token.user.id }, 
-    } as oauth2.Token;
+      client: { id: token.client.clientId } as oauth2.Client,
+      user: { id: token.user.id } as oauth2.User,
+    } as oauth2.RefreshToken;
   },
 
   revokeToken: async (token) => {
-    await prisma.oAuthRefreshToken.deleteMany({
-        where: { refreshToken: token.refreshToken }
-    });
-    await prisma.oAuthAccessToken.deleteMany({
-        where: { userId: token.user.id, clientId: (await prisma.oAuthClient.findUnique({ where: { clientId: token.client.id } }))!.id }
-    });
-    return true; 
+    const result = await prisma.oAuthRefreshToken.deleteMany({ where: { refreshToken: token.refreshToken } });
+    return result.count > 0;
   },
   
   verifyScope: async (scope, token) => { 
