@@ -9,11 +9,11 @@ services:
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Hgbe123
+      POSTGRES_PASSWORD: Hgunified123
     ports:
       - '5432:5432'
     networks:
-      - hgbe-network
+      - hgunified-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
@@ -28,13 +28,16 @@ services:
       - '4106:4106'
     stdin_open: true
     tty: true  
+    # imagename
+    container_name: hgunified-server
+    restart: always
     depends_on:
       postgres_db:
         condition: service_healthy
     env_file:
       - .env.prod
     networks:
-      - hgbe-network
+      - hgunified-network
 networks:
-  hgbe-network:
-    name: hgbe-network
+  hgunified-network:
+    name: hgunified-network
